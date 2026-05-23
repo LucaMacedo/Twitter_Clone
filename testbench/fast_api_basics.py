@@ -1,5 +1,10 @@
 from fastapi import FastAPI
-import uvicorn
+from pydantic import BaseModel # use pydantic to define a model for the product. This is a good practice to ensure that the data is valid and to provide better documentation for the API.
+
+class Product(BaseModel):
+    id: int
+    name: str
+    price: float
 
 app = FastAPI()
 products = []
@@ -17,7 +22,7 @@ async def get_product(product_id: int):
     return {"error": "Produkt nicht gefunden"}
 
 @app.put("/products/{product_id}")
-async def update_product(product_id: int, product: dict):
+async def update_product(product_id: int, product: Product): # use product object instead of dict. This way you can ensure that the data is valid and you can use the product object in the function.
     for index, p in enumerate(products): # use index to with product
         if p.get("id") == product_id:
             products[index] = product # update with new product when condition is fullfilled
@@ -33,7 +38,7 @@ async def delete_product(product_id: int):
     return {"error": "Produkt nicht gefunden"}
 
 @app.post("/products")
-async def create_product(product: dict):
+async def create_product(product: Product):
     products.append(product)
     return {"success": "Produkt erstellt"}
 
