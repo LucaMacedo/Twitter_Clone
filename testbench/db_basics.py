@@ -4,7 +4,7 @@
 #from sqlalchemy.orm import sessionmaker # Session für DB-Operationen
 # A database engine (or storage engine) is the underlying software component that a database management system (DBMS) uses to create, read, update and delete (CRUD) data from a database.
 from fastapi import FastAPI, Depends, HTTPException # FastAPI ist ein modernes Web-Framework für die Erstellung von APIs mit Python. Es basiert auf Starlette und Pydantic und bietet Funktionen wie automatische Generierung von OpenAPI-Dokumentation, Validierung von Anfragen und Antworten sowie Dependency Injection.
-from fastapi.security import OAuth2PasswordRequestForm # OAuth2PasswordRequestForm ist eine Klasse, die von FastAPI bereitgestellt wird und zur Verarbeitung von Formularen für die Authentifizierung verwendet wird. Sie enthält Felder wie "username" und "password", die vom Benutzer ausgefüllt werden müssen.
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer # OAuth2PasswordRequestForm ist eine Klasse, die von FastAPI bereitgestellt wird und zur Verarbeitung von Formularen für die Authentifizierung verwendet wird. Sie enthält Felder wie "username" und "password", die vom Benutzer ausgefüllt werden müssen.
 from pydantic import EmailStr # EmailStr ist ein spezieller Datentyp, der von Pydantic bereitgestellt wird und zur Validierung von E-Mail-Adressen verwendet wird. Er stellt sicher, dass die eingegebene E-Mail-Adresse ein gültiges Format hat.
 # BaseModel war auch drin, wird ersetzt durch SQLModel
 from sqlmodel import SQLModel, Field, Session, create_engine, UniqueConstraint # SQLModel ist eine Erweiterung von Pydantic, die speziell für die Arbeit mit SQL-Datenbanken entwickelt wurde. 
@@ -13,11 +13,14 @@ from sqlmodel import SQLModel, Field, Session, create_engine, UniqueConstraint #
 from typing import Optional
 from pydantic import validator # validere PW
 import bcrypt
+import datetime
+from jose import jwt # Encoden von Daten im Token
 engine = create_engine("sqlite:///users.db")
 #Base = declarative_base() # Base-Klasse für die Deklaration der Tabellen. Ersetzt durch SQLModel, da SQLModel von Base erbt und die gleiche Funktionalität bietet.
 
 app = FastAPI()
-
+oath2_schema = OAuth2PasswordBearer(tokenUrl="login") # OAuth2PasswordBearer ist eine Klasse, die von FastAPI bereitgestellt wird und zur Implementierung der OAuth2-Authentifizierung verwendet wird. Sie gibt an, dass der Token über den Endpunkt "/login" abgerufen werden kann.
+SECRET_KEY = "very-secret-key" # Schlüssel für die JWT-Verschlüsselung. In einer echten Anwendung sollte dieser Schlüssel sicher aufbewahrt und nicht im Code hardcodiert werden.
 # Nicht mehr nötig wegen User Table
 # class User(Base): # User-Klasse, die von Base erbt. Sie repräsentiert die Tabelle "users" in der Datenbank.
 #     __tablename__ = "users" 
@@ -97,9 +100,15 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = D
         raise HTTPException(status_code=401, detail="Incorrect username or password")
     if not bcrypt.checkpw(form_data.password.encode("utf-8"), db_user.password.encode("utf-8")):
         raise HTTPException(status_code=401, detail="Incorrect username or password")
-    return {"user": f"Eingeloggt als {db_user.username }"}
 
-@app.get("/users/")
+    jwt_data = {
+        "email": db_user.email,
+        "exp": datetime.datetime.now() + datetime.timedelta(minutes=30)
+    }
+    access_token = jwt.encode(jwt_data, key=SECRET_KEY, algorithm="HS256")
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.get("/users/", dependencies=[Depends(oath2_schema)]) # DP wird nicht gebruacht, weswegen man es in den Decorator schreiben kann
 def get_all_users(session: Session = Depends(get_session)):
     users = session.query(UserTable).all()
     return users
@@ -107,3 +116,10 @@ def get_all_users(session: Session = Depends(get_session)):
 @app.on_event("startup") #hook
 def on_startup():
     create_db_and_table() # wird immer bei start ausgeführt
+
+@app.get("/current_user/")
+def get_current_user(session: Session = Depends(get_session), token: str = Depends(oath2_schema)):
+    payload = jwt.decode(token, key=SECRET_KEY) #dict
+    email = payload.get("email") # email aus token
+    current_user = session.query(UserTable).filter(UserTable.email == email).first() # sucht user in db
+    return current_user
