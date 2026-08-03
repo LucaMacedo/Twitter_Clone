@@ -1,27 +1,15 @@
 # API Router: Routes logisch bündeln (z.B Anlgeug und Löschen von User).
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, BackgroundTasks
 
 app = FastAPI() 
-# Router ordnet Funktionen zu einem bestimmten Pfad zu.
-router1 = APIRouter(tags=["Auth"])
-router2 = APIRouter(tags=["Tweets"])
+
+def send_mail(email: str, message: str):
+    with open("log.txt", mode="w") as email_file:
+        content = f"Nachricht für {email}: {message}"
+        email_file.write(content)
 
 # Background Task läuft im Hintergrund einer HTTP-Anfrage. Z.B. E-Mail versenden, wenn ein User sich registriert.
-@router1.get("/hello")
-def hello_world():
-    return {"message": "Hello World"}
-
-@router1.get("/hello2")
-def hello_world():
-    return {"message": "Hello World2"}
-
-@router2.get("/hello3")
-def hello_world():
-    return {"message": "Hello World3"}
-
-@router2.get("/hello4")
-def hello_world():
-    return {"message": "Hello World4"}
-
-app.include_router(router1)
-app.include_router(router2)
+@app.post("/nachricht/{email}")
+async def sende_nachricht(email: str, background_task: BackgroundTasks):
+    background_task.add_task(send_mail, email, message="Bestellung aufgegeben")
+    return {"message": f"Email ist an {email} verschickt worden"}
