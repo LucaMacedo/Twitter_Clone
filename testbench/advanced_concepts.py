@@ -1,8 +1,28 @@
 # API Router: Routes logisch bündeln (z.B Anlgeug und Löschen von User).
 from fastapi import FastAPI, BackgroundTasks
 
-app = FastAPI() 
+description = """
+## Items
 
+* **Create User** (_not implemented_).
+"""
+
+# Metadaten, die zur App gehören
+app = FastAPI(
+    title="Unsere Produkt API",
+    version="0.2.0",
+    description=description,
+    terms_of_service="http://example.com/terms/",
+    contact={
+        "name": "John Doe",
+        "email": "entwickler@example.com",
+        "url": "http://example.com"
+    },
+    license_info={
+        "name": "MIT License",
+        "url": "https://opensource.org/licenses/MIT",
+    }
+)
 def send_mail(email: str, message: str):
     with open("log.txt", mode="w") as email_file:
         content = f"Nachricht für {email}: {message}"
