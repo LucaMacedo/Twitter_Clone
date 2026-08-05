@@ -1,13 +1,15 @@
 # API Router: Routes logisch bündeln (z.B Anlgeug und Löschen von User).
 from fastapi import FastAPI, BackgroundTasks, Request
 import time
-description = """
-## Items
+import logging
+import sys
 
-* **Create User** (_not implemented_).
-"""
-
-# Metadaten, die zur App gehören
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    stream=sys.stdout
+)
 app = FastAPI()
 
 @app.middleware("http")
@@ -15,7 +17,7 @@ async def performance_middle(request: Request, call_next):
     start_time = time.perf_counter()
     response = await call_next(request)
     end_time = time.perf_counter()
-    print(f"Dauer in Sekunden: {end_time - start_time} für {request.url.path}")
+    logging.info(f"Dauer in Sekunden: {end_time - start_time} für {request.url.path}")
     return response
 
 def send_mail(email: str, message: str):
