@@ -1,16 +1,18 @@
 # API Router: Routes logisch bündeln (z.B Anlgeug und Löschen von User).
-from fastapi import FastAPI, BackgroundTasks, Request
-import time
 import logging
 import sys
+import time
+
+from fastapi import BackgroundTasks, FastAPI, Request
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    stream=sys.stdout
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    stream=sys.stdout,
 )
 app = FastAPI()
+
 
 @app.middleware("http")
 async def performance_middle(request: Request, call_next):
@@ -20,10 +22,12 @@ async def performance_middle(request: Request, call_next):
     logging.info(f"Dauer in Sekunden: {end_time - start_time} für {request.url.path}")
     return response
 
+
 def send_mail(email: str, message: str):
     with open("log.txt", mode="w") as email_file:
         content = f"Nachricht für {email}: {message}"
         email_file.write(content)
+
 
 # Background Task läuft im Hintergrund einer HTTP-Anfrage. Z.B. E-Mail versenden, wenn ein User sich registriert.
 @app.post("/nachricht/{email}")
