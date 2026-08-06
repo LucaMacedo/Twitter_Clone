@@ -1,2 +1,5 @@
 /testbench
 *.db
+*.pyc
+CapstoneProject/src/twitter.egg-info
+*__pycache__
